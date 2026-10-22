@@ -1,0 +1,57 @@
+{
+    "id": "gen-1792665767-4QDKOrJd0JyAZt6pmD91",
+    "choices": [
+        {
+            "finish_reason": "stop",
+            "index": 0,
+            "logprobs": null,
+            "message": {
+                "content": "I'm sorry to hear you've been dealing with headaches for three days. While I can't diagnose or provide medical advice, I can offer some general guidance.\n\n**When to consider seeing a healthcare professional:**\n- Headaches that are severe or worsening\n- Headaches accompanied by fever, stiff neck, confusion, seizures, or neurological symptoms\n- Headaches that started suddenly and are \"the worst headache of your life\"\n- Headaches following an injury to the head or neck\n- New headaches that begin after age 50\n- Changes in your usual headache pattern\n\n**For common, mild headaches:**\n- Rest and relaxation\n- Staying hydrated\n- Over-the-counter pain relievers (following package directions)\n- Applying a cold or warm compress to your head or neck\n- Getting adequate sleep\n\nSince your headaches have persisted for three days, it would be a good idea to consult with a healthcare professional, especially if they're unusual for you or if you're experiencing any concerning symptoms. They can properly evaluate your situation and recommend appropriate treatment.\n\nIs there anything specific about your headaches that's particularly concerning you?",
+                "refusal": null,
+                "role": "assistant",
+                "annotations": null,
+                "audio": null,
+                "function_call": null,
+                "tool_calls": null,
+                "reasoning": null
+            },
+            "native_finish_reason": "stop"
+        }
+    ],
+    "created": 1792665767,
+    "model": "poolside/laguna-s-2.1:free",
+    "object": "chat.completion",
+    "metadata": null,
+    "moderation": null,
+    "service_tier": null,
+    "system_fingerprint": null,
+    "usage": {
+        "completion_tokens": 235,
+        "prompt_tokens": 63,
+        "total_tokens": 298,
+        "completion_tokens_details": {
+            "accepted_prediction_tokens": null,
+            "audio_tokens": 0,
+            "reasoning_tokens": 0,
+            "rejected_prediction_tokens": null,
+            "text_tokens": null,
+            "image_tokens": 0
+        },
+        "prompt_tokens_details": {
+            "audio_tokens": 0,
+            "cache_write_tokens": 0,
+            "cached_tokens": 0,
+            "image_tokens": null,
+            "text_tokens": null,
+            "video_tokens": 0
+        },
+        "cost": 0,
+        "is_byok": false,
+        "cost_details": {
+            "upstream_inference_cost": 0,
+            "upstream_inference_prompt_cost": 0,
+            "upstream_inference_completions_cost": 0
+        }
+    },
+    "provider": "Poolside"
+}
