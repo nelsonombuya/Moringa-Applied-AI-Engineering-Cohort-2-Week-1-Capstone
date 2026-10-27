@@ -1,12 +1,12 @@
 {
-    "id": "chatcmpl-774",
+    "id": "chatcmpl-794",
     "choices": [
         {
             "finish_reason": "stop",
             "index": 0,
             "logprobs": null,
             "message": {
-                "content": "I'm not a medical professional, but I can offer some general guidance. If you're experiencing frequent or severe headaches, it's always a good idea to consult with a healthcare professional for personalized advice.\n\nThat being said, if you've been having headaches for three days, it's possible that they could be caused by a variety of factors, such as:\n\n1. Stress or fatigue\n2. Dehydration or lack of sleep\n3. Eye strain or poor posture\n4. Sinus pressure or allergies\n5. Tension or muscle strain\n\nIn most cases, headaches caused by these factors can be managed with self-care measures such as:\n\n1. Staying hydrated by drinking plenty of water\n2. Getting enough rest and practicing relaxation techniques, like deep breathing or meditation\n3. Applying cold or warm compresses to the forehead or neck\n4. Taking over-the-counter pain relievers, such as acetaminophen or ibuprofen, as directed\n\nHowever, if you're experiencing any of the following, you should seek medical attention:\n\n1. Severe or worsening headaches\n2. Headaches accompanied by fever, confusion, or stiff neck\n3. Headaches that are frequent or persistent\n4. Headaches that are accompanied by nausea, vomiting, or sensitivity to light and sound\n\nIt's always better to err on the side of caution and consult with a healthcare professional to determine the cause of your headaches and develop a plan to manage them.\n\nIn the meantime, you can try some general remedies to help alleviate your headaches, such as:\n\n1. Applying a cold or warm compress to the forehead or neck\n2. Taking a break and resting in a quiet, dark room\n3. Staying hydrated by drinking plenty of water\n4. Practicing relaxation techniques, such as deep breathing or meditation\n\nIf your headaches persist or worsen, please seek medical attention.\n\nWould you like more information on any of these topics or would you like me to help you find a healthcare professional in your area?",
+                "content": "I'm not a medical professional, but I can offer some general guidance. If you're experiencing headaches for three days, it's a good idea to consider a few things:\n\n1. **Severity**: Are your headaches mild, moderate, or severe? If they're severe, it's a good idea to seek medical attention.\n2. **Pattern**: Are your headaches constant, or do they come and go? If they're constant, it may be worth exploring further.\n3. **Triggers**: Have you experienced any recent changes or stressors that could be contributing to your headaches? (e.g., lack of sleep, dehydration, certain foods, or environmental factors)\n4. **Other symptoms**: Are you experiencing any other symptoms, such as fever, fatigue, or sensitivity to light and sound?\n\nIn general, if you're experiencing headaches for three days, it's a good idea to:\n\n* Stay hydrated by drinking plenty of water\n* Rest and try to manage stress\n* Avoid triggers that may be contributing to your headaches\n* Consider over-the-counter pain relief medication, such as acetaminophen or ibuprofen, if recommended by a healthcare professional\n\nHowever, if you're concerned about your headaches or if they're severe, persistent, or accompanied by other symptoms, it's always best to consult with a healthcare professional for personalized guidance and diagnosis.\n\nIn the meantime, you can reach out to AfyaPlus Health's support team for general guidance and resources. We're here to help!",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": null,
@@ -16,7 +16,7 @@
             }
         }
     ],
-    "created": 1792666910,
+    "created": 1792689569,
     "model": "llama3.2",
     "object": "chat.completion",
     "metadata": null,
@@ -24,14 +24,14 @@
     "service_tier": null,
     "system_fingerprint": "fp_ollama",
     "usage": {
-        "completion_tokens": 406,
+        "completion_tokens": 302,
         "prompt_tokens": 63,
-        "total_tokens": 469,
+        "total_tokens": 365,
         "completion_tokens_details": null,
         "prompt_tokens_details": {
             "audio_tokens": null,
             "cache_write_tokens": null,
-            "cached_tokens": 15,
+            "cached_tokens": 62,
             "image_tokens": null,
             "text_tokens": null
         }

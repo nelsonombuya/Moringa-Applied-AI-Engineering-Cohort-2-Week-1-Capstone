@@ -1,38 +1,46 @@
 {
-    "id": "gen-1792665767-4QDKOrJd0JyAZt6pmD91",
+    "id": "gen-1792687851-aLwXLr9ZCHFuzh4cCTop",
     "choices": [
         {
-            "finish_reason": "stop",
+            "finish_reason": "length",
             "index": 0,
             "logprobs": null,
             "message": {
-                "content": "I'm sorry to hear you've been dealing with headaches for three days. While I can't diagnose or provide medical advice, I can offer some general guidance.\n\n**When to consider seeing a healthcare professional:**\n- Headaches that are severe or worsening\n- Headaches accompanied by fever, stiff neck, confusion, seizures, or neurological symptoms\n- Headaches that started suddenly and are \"the worst headache of your life\"\n- Headaches following an injury to the head or neck\n- New headaches that begin after age 50\n- Changes in your usual headache pattern\n\n**For common, mild headaches:**\n- Rest and relaxation\n- Staying hydrated\n- Over-the-counter pain relievers (following package directions)\n- Applying a cold or warm compress to your head or neck\n- Getting adequate sleep\n\nSince your headaches have persisted for three days, it would be a good idea to consult with a healthcare professional, especially if they're unusual for you or if you're experiencing any concerning symptoms. They can properly evaluate your situation and recommend appropriate treatment.\n\nIs there anything specific about your headaches that's particularly concerning you?",
+                "content": "I'm sorry to hear you've been dealing with headaches. While I can't diagnose your specific situation, I can share some general guidance to help you assess the situation.\n\n**When to seek medical attention promptly:**\n\n- Sudden, severe \"thunderclap\" headache (the worst headache of your life)\n- Headache after a head injury\n- Fever, stiff neck, confusion, seizures, or vision changes",
                 "refusal": null,
                 "role": "assistant",
                 "annotations": null,
                 "audio": null,
                 "function_call": null,
                 "tool_calls": null,
-                "reasoning": null
+                "reasoning": "The user is asking about persistent headaches for three days and whether they should be concerned. This is a medical question that requires careful handling. I need to provide general health guidance without diagnosing or prescribing. I should:\n1. Acknowledge their concern\n2. Provide general information about when to seek medical attention\n3. List common causes of headaches\n4. Suggest when to see a doctor vs. when it might be less urgent\n5. Include red flag symptoms that warrant immediate medical attention\n\nThis is within my scope as an AfyaPlus Health assistant - providing general health guidance while recommending professional consultation for specific concerns.\n\nLet me structure a helpful response that covers:\n- General advice about headache management\n- Red flags that require immediate care\n- Common causes (stress, dehydration, tension, etc.)\n- When to seek medical help\n- Self-care suggestions\n\nI should not:\n- Diagnose them with a specific condition\n- Tell them exactly what's wrong\n- Prescribe any treatment\n\nI can provide educational information and guidance on when to seek care.",
+                "reasoning_details": [
+                    {
+                        "type": "reasoning.text",
+                        "text": "The user is asking about persistent headaches for three days and whether they should be concerned. This is a medical question that requires careful handling. I need to provide general health guidance without diagnosing or prescribing. I should:\n1. Acknowledge their concern\n2. Provide general information about when to seek medical attention\n3. List common causes of headaches\n4. Suggest when to see a doctor vs. when it might be less urgent\n5. Include red flag symptoms that warrant immediate medical attention\n\nThis is within my scope as an AfyaPlus Health assistant - providing general health guidance while recommending professional consultation for specific concerns.\n\nLet me structure a helpful response that covers:\n- General advice about headache management\n- Red flags that require immediate care\n- Common causes (stress, dehydration, tension, etc.)\n- When to seek medical help\n- Self-care suggestions\n\nI should not:\n- Diagnose them with a specific condition\n- Tell them exactly what's wrong\n- Prescribe any treatment\n\nI can provide educational information and guidance on when to seek care.",
+                        "format": "unknown",
+                        "index": 0
+                    }
+                ]
             },
-            "native_finish_reason": "stop"
+            "native_finish_reason": "length"
         }
     ],
-    "created": 1792665767,
-    "model": "poolside/laguna-s-2.1:free",
+    "created": 1792687851,
+    "model": "liquid/lfm-2.5-2.6b:free",
     "object": "chat.completion",
     "metadata": null,
     "moderation": null,
     "service_tier": null,
-    "system_fingerprint": null,
+    "system_fingerprint": "vllm-0.32.0-6d0cdf43",
     "usage": {
-        "completion_tokens": 235,
+        "completion_tokens": 300,
         "prompt_tokens": 63,
-        "total_tokens": 298,
+        "total_tokens": 363,
         "completion_tokens_details": {
             "accepted_prediction_tokens": null,
             "audio_tokens": 0,
-            "reasoning_tokens": 0,
+            "reasoning_tokens": 216,
             "rejected_prediction_tokens": null,
             "text_tokens": null,
             "image_tokens": 0
@@ -53,5 +61,5 @@
             "upstream_inference_completions_cost": 0
         }
     },
-    "provider": "Poolside"
+    "provider": "Liquid"
 }

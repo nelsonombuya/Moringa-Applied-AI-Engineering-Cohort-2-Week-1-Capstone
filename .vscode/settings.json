@@ -1,6 +1,7 @@
 {
   "cSpell.words": [
     "Afya",
+    "byok",
     "dotenv",
     "getenv",
     "httpx",
@@ -8,6 +9,7 @@
     "Juma",
     "kichwa",
     "linalg",
+    "logprobs",
     "maumivu",
     "monday",
     "Moringa",
