@@ -1,0 +1,15 @@
+{
+    "patient_id": "patient_123",
+    "start_time": "2026-11-01T13:37:25.039417",
+    "end_time": "2026-11-01T13:37:28.360229",
+    "turns": 1,
+    "total_tokens": 254,
+    "messages": [
+        {
+            "timestamp": "2026-11-01T13:37:28.360184",
+            "user": "I have a mild headache today.",
+            "assistant": "I'm sorry to hear that you're experiencing a mild headache. Here are some general tips that may help alleviate your discomfort:\n\n1. **Stay Hydrated**: Drink plenty of water, as dehydration can contribute to headaches.\n\n2. **Rest in a Dark, Quiet Room**: Sometimes, reducing sensory input can help ease headache symptoms.\n\n3. **Apply a Cold or Warm Compress**: A cold pack on your forehead or a warm cloth on the back of your neck may provide relief.\n\n4. **Practice Relaxation Techniques**: Deep breathing, meditation, or gentle stretching can help reduce tension.\n\n5. **Over-the-Counter Pain Relief**: If you\u2019re comfortable and it's appropriate for you, consider using over-the-counter pain relievers, following the instructions on the label.\n\n6. **Limit Screen Time**: If you\u2019ve been staring at screens for a long time, take breaks to reduce eye strain.\n\nIf your headache persists, worsens, or is accompanied by other symptoms, it's a good idea to consult a healthcare professional for further evaluation.",
+            "tokens_used": 254
+        }
+    ]
+}
