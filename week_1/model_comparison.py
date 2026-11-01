@@ -6,19 +6,7 @@ from dotenv import load_dotenv
 from openai import OpenAI
 
 load_dotenv()
-# I'll be using OpenRouter for the cloud model
-# if os.getenv("OPENROUTER_API_KEY"):
-#     client = OpenAI(
-#         api_key=os.getenv("OPENROUTER_API_KEY"),
-#         base_url="https://openrouter.ai/api/v1",
-#     )
-#     model = "openrouter/free"
-# else:
-#     client = OpenAI(
-#         api_key="ollama",
-#         base_url="http://localhost:11434/v1"
-#     )
-#     model = "llama3.2"
+
 models = [
     {
         "name": "Local Model",
