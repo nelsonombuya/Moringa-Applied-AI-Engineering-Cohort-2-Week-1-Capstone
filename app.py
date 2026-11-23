@@ -12,20 +12,29 @@ Usage:
     python app.py "I have crushing chest pain"    Triage a custom patient message
     python app.py --prompt role "..."             Use another prompt (basic|role|advanced)
     python app.py --mode local "..."              Force one pathway (auto|cloud|local)
+
+If the local Ollama server is not running, `ollama serve` is started in the background
+when the local pathway is needed, and stopped again when the run ends. Set
+LOCAL_AUTOSTART=false to disable this.
 """
 
+from atexit import register
 from copy import deepcopy
 from dataclasses import dataclass
 from json import JSONDecodeError, loads
 from os import environ
 from pprint import pprint
+from shutil import which
+from subprocess import DEVNULL, Popen, TimeoutExpired
 from sys import argv, exit, stderr
 from textwrap import dedent
-from time import perf_counter
-from typing import Any, Literal, get_args
+from time import perf_counter, sleep
+from typing import Any, Literal, Self, get_args
+from urllib.parse import urlparse
 
 from dotenv import load_dotenv
-from httpx import HTTPStatusError, Timeout, TimeoutException
+from httpx2 import HTTPError, HTTPStatusError, Timeout, TimeoutException
+from httpx2 import get as http_get
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
 load_dotenv()
@@ -42,7 +51,8 @@ class TriageResult:
     downstream backend; the other fields are pipeline metadata kept OUT of the payload.
 
     `latency_ms` is the time taken by the pathway that produced the answer.
-    `total_latency_ms` is the full wait, including any failed cloud attempt.
+    `total_latency_ms` is the full wait, including any failed cloud attempt and any
+    time spent auto-starting the local Ollama server.
     """
 
     payload: dict[str, Any]
@@ -76,6 +86,9 @@ class AfyaPlusTriageEngine:
     """
     AfyaPlus Triage Engine is a healthcare triage system that leverages AI to assess
     patient symptoms and provide routing recommendations.
+
+    Use it as a context manager (`with AfyaPlusTriageEngine() as engine:`) so any
+    Ollama server it auto-started is stopped again when the block ends.
     """
 
     PromptVariation = Literal["basic", "role", "advanced"]
@@ -84,6 +97,7 @@ class AfyaPlusTriageEngine:
 
     MAX_CLOUD_TIMEOUT_SECONDS: float = 4.0
     MAX_OUTPUT_TOKENS: int = 400
+    LOCAL_HOSTS: tuple[str, ...] = ("localhost", "127.0.0.1", "::1")
 
     MESSAGE_START_DELIMITER: str = "PATIENT MESSAGE START"
     MESSAGE_END_DELIMITER: str = "PATIENT MESSAGE END"
@@ -145,9 +159,105 @@ class AfyaPlusTriageEngine:
         self.local_timeout_seconds: float = float(
             environ.get("LOCAL_TIMEOUT_SECONDS", 60.0)
         )
+        # If Ollama is not running, start `ollama serve` in the background and stop it
+        # again when the engine closes (only a process started by this engine is stopped)
+        self.local_autostart: bool = environ.get("LOCAL_AUTOSTART", "true").lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        self.local_startup_timeout_seconds: float = float(
+            environ.get("LOCAL_STARTUP_TIMEOUT_SECONDS", 20.0)
+        )
+        self._ollama_process: Popen[bytes] | None = None
 
         # Shared Configuration (0.0 = deterministic, reproducible triage output)
         self.temperature: float = 0.0
+
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
+
+    def close(self) -> None:
+        """
+        Stops the `ollama serve` process, but only if this engine started it. An Ollama
+        server that was already running (e.g. the desktop app) is never touched.
+        """
+        process, self._ollama_process = self._ollama_process, None
+        if process is None or process.poll() is not None:
+            return
+
+        print(
+            "[local] Stopping the 'ollama serve' process started by this run.",
+            file=stderr,
+        )
+        process.terminate()
+        try:
+            process.wait(timeout=5)
+        except TimeoutExpired:
+            process.kill()
+            process.wait()
+
+    def _local_server_is_up(self) -> bool:
+        """Checks whether the Ollama server answers on its root URL."""
+        url = self.local_base_url.rstrip("/").removesuffix("/v1")
+        try:
+            return http_get(url, timeout=1.0).status_code == 200
+        except HTTPError, ValueError:
+            return False
+
+    def _ensure_local_server(self) -> float:
+        """
+        Starts `ollama serve` in the background if the local server is not running.
+
+
+        Never raises: if the server cannot be started, the local pathway simply fails
+        later with a connection error and the fail-safe takes over.
+
+
+        Returns:
+            float: Milliseconds spent starting the server (0.0 if nothing was started).
+        """
+        if not self.local_autostart or self._local_server_is_up():
+            return 0.0
+
+        if urlparse(self.local_base_url).hostname not in self.LOCAL_HOSTS:
+            return 0.0  # Never auto-start a server for a remote Ollama host
+
+        executable = which("ollama")
+        if executable is None:
+            print(
+                "[local] Ollama is not running and 'ollama' was not found.", file=stderr
+            )
+            return 0.0
+
+        start = perf_counter()
+        print("[local] Ollama is not running. Starting 'ollama serve'...", file=stderr)
+        try:
+            self._ollama_process = Popen(
+                [executable, "serve"], stdout=DEVNULL, stderr=DEVNULL
+            )
+        except OSError as e:
+            print(f"[local] Could not start 'ollama serve': {e}", file=stderr)
+            return 0.0
+        register(self.close)  # Also stops it on normal exit or Ctrl+C
+
+        deadline = start + self.local_startup_timeout_seconds
+        while perf_counter() < deadline:
+            if self._local_server_is_up():
+                elapsed_ms = (perf_counter() - start) * 1000
+                print(f"[local] Ollama is ready after {elapsed_ms:.0f} ms.", file=stderr)
+                return elapsed_ms
+            if self._ollama_process.poll() is not None:
+                print("[local] 'ollama serve' exited early.", file=stderr)
+                break
+            sleep(0.25)
+        else:
+            print("[local] Timed out waiting for Ollama to start.", file=stderr)
+
+        return (perf_counter() - start) * 1000
 
     def _get_system_prompt(self, variation: PromptVariation = "advanced") -> str:
         """
@@ -334,14 +444,14 @@ class AfyaPlusTriageEngine:
 
         Returns:
             tuple[OpenAI, str, Timeout]: The OpenAI-compatible client, the model name
-            configured for the specified model type, and the httpx timeout.
+            configured for the specified model type, and the httpx2 timeout.
 
         Raises:
             TriageEngineError: If the cloud pathway has no API key.
             ValueError: If an invalid model type is provided.
 
         Note:
-            httpx applies a timeout to each network phase (connect, write, read, pool),
+            httpx2 applies a timeout to each network phase (connect, write, read, pool),
             not to the whole request. The cloud connect phase is capped at 2.0s so a
             dead network fails fast, which keeps the total close to the 4.0s budget.
         """
@@ -419,10 +529,12 @@ class AfyaPlusTriageEngine:
             )
 
         messages = self._build_messages(patient_message, prompt_variation)
-        failed_latency_ms = 0.0
+        overhead_ms = 0.0  # Time lost to failed attempts and Ollama start-up
         cloud_failed = False
 
         for model_type in pathways[mode]:
+            if model_type == "local":
+                overhead_ms += self._ensure_local_server()
             start = perf_counter()
             try:
                 payload, model = self._call_model(model_type, messages)
@@ -433,7 +545,7 @@ class AfyaPlusTriageEngine:
                     pathway=model_type,
                     latency_ms=latency_ms,
                     used_fallback=cloud_failed,
-                    total_latency_ms=failed_latency_ms + latency_ms,
+                    total_latency_ms=overhead_ms + latency_ms,
                 )
             except APITimeoutError, TimeoutException:
                 error = "request timed out"
@@ -449,7 +561,7 @@ class AfyaPlusTriageEngine:
                 error = f"unexpected {type(e).__name__}: {e}"
 
             elapsed_ms = (perf_counter() - start) * 1000
-            failed_latency_ms += elapsed_ms
+            overhead_ms += elapsed_ms
             cloud_failed = cloud_failed or model_type == "cloud"
             print(
                 f"[{model_type}] pathway failed after {elapsed_ms:.0f} ms: {error}",
@@ -463,8 +575,8 @@ class AfyaPlusTriageEngine:
             model=None,
             pathway="fail-safe",
             used_fallback=cloud_failed,
-            latency_ms=failed_latency_ms,
-            total_latency_ms=failed_latency_ms,
+            latency_ms=overhead_ms,
+            total_latency_ms=overhead_ms,
             payload=deepcopy(self.FAIL_SAFE_PAYLOAD),
         )
 
@@ -596,7 +708,8 @@ def main(args: list[str]) -> int:
     patient_message = " ".join(args).strip() or DEFAULT_PATIENT_MESSAGE
     print(f"Patient message: {patient_message}\n")
 
-    result = AfyaPlusTriageEngine().run_triage(patient_message, mode, prompt_variation)
+    with AfyaPlusTriageEngine() as engine:
+        result = engine.run_triage(patient_message, mode, prompt_variation)
 
     print("Parsed triage dictionary:")
     pprint(result.payload, sort_dicts=False)
