@@ -1,17 +1,11 @@
 [project]
+name = "moringa-applied-ai-engineering-cohort-2-week-1-capstone"
 version = "0.1.0"
+description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.14"
-name = "moringa-applied-ai-engineering"
-description = "Moringa Applied AI Engineering"
 dependencies = [
-    "numpy>=2.5.4",
+    "dotenv>=0.9.9",
     "httpx>=0.28.1",
-    "pandas>=3.1.0",
-    "ollama>=0.6.3",
-    "openai>=3.31.0",
-    "tabulate>=0.10.0",
-    "jupyterlab>=4.6.4",
-    "openrouter>=0.11.3",
-    "python-dotenv>=1.2.2",
+    "openai>=3.42.0",
 ]
