@@ -14,6 +14,7 @@ Usage:
     python app.py --mode local "..."              Force one pathway (auto|cloud|local)
 """
 
+from copy import deepcopy
 from dataclasses import dataclass
 from json import JSONDecodeError, loads
 from os import environ
@@ -24,7 +25,7 @@ from time import perf_counter
 from typing import Any, Literal, get_args
 
 from dotenv import load_dotenv
-from httpx import HTTPStatusError, TimeoutException
+from httpx import HTTPStatusError, Timeout, TimeoutException
 from openai import APIConnectionError, APIStatusError, APITimeoutError, OpenAI
 
 load_dotenv()
@@ -39,6 +40,9 @@ class TriageResult:
     """
     The outcome of a triage run. `payload` is the exact AfyaPlus schema consumed by the
     downstream backend; the other fields are pipeline metadata kept OUT of the payload.
+
+    `latency_ms` is the time taken by the pathway that produced the answer.
+    `total_latency_ms` is the full wait, including any failed cloud attempt.
     """
 
     payload: dict[str, Any]
@@ -46,6 +50,7 @@ class TriageResult:
     model: str | None
     latency_ms: float
     used_fallback: bool = False
+    total_latency_ms: float = 0.0
 
     def routing_line(self) -> str:
         """A one-line, human-readable routing decision for the terminal."""
@@ -57,8 +62,13 @@ class TriageResult:
         if self.model:
             line += f" ({self.model})"
         line += f" | {self.latency_ms:.0f} ms"
-        if self.used_fallback:
-            line += " | cloud failed, fell back to local"
+        if self.pathway == "fail-safe":
+            line += f" | all pathways failed (total wait {self.total_latency_ms:.0f} ms)"
+        elif self.used_fallback:
+            line += (
+                " | cloud failed, fell back to local"
+                f" (total wait {self.total_latency_ms:.0f} ms)"
+            )
         return line
 
 
@@ -73,6 +83,7 @@ class AfyaPlusTriageEngine:
     ModelType = Literal["cloud", "local"]
 
     MAX_CLOUD_TIMEOUT_SECONDS: float = 4.0
+    MAX_OUTPUT_TOKENS: int = 400
 
     MESSAGE_START_DELIMITER: str = "PATIENT MESSAGE START"
     MESSAGE_END_DELIMITER: str = "PATIENT MESSAGE END"
@@ -156,7 +167,7 @@ class AfyaPlusTriageEngine:
             enforcing CoT processes to highlight its reasoning, and strict defensive
             guardrails against fluff, hallucination, and prompt injection.
         """
-        routes = f"< {" | ".join(self.ROUTING_DESTINATIONS)} >"
+        routes = "< " + " | ".join(self.ROUTING_DESTINATIONS) + " >"
 
         if variation == "basic":
             return dedent("""
@@ -313,7 +324,7 @@ class AfyaPlusTriageEngine:
 
     def _get_model_client(
         self, model_type: ModelType = "cloud"
-    ) -> tuple[OpenAI, str, float]:
+    ) -> tuple[OpenAI, str, Timeout]:
         """
         Gets the appropriate model client based on the specified model type.
 
@@ -322,41 +333,49 @@ class AfyaPlusTriageEngine:
                 "cloud" or "local".
 
         Returns:
-            tuple[OpenAI, str, float]: The OpenAI-compatible client, the model name
-            configured for the specified model type, and the timeout value.
+            tuple[OpenAI, str, Timeout]: The OpenAI-compatible client, the model name
+            configured for the specified model type, and the httpx timeout.
 
         Raises:
             TriageEngineError: If the cloud pathway has no API key.
             ValueError: If an invalid model type is provided.
+
+        Note:
+            httpx applies a timeout to each network phase (connect, write, read, pool),
+            not to the whole request. The cloud connect phase is capped at 2.0s so a
+            dead network fails fast, which keeps the total close to the 4.0s budget.
         """
         if model_type == "cloud":
             if not self.cloud_api_key:
                 raise TriageEngineError("OPENROUTER_API_KEY is not set.")
 
-            # TODO: Verify timeout issues
             # max_retries=0: the SDK retries twice by default, which would silently
             # break the 4.0s cloud budget. Resilience comes from our local fallback.
+            timeout = Timeout(
+                self.cloud_timeout_seconds, connect=min(2.0, self.cloud_timeout_seconds)
+            )
             return (
                 OpenAI(
                     api_key=self.cloud_api_key,
                     base_url=self.cloud_base_url,
-                    timeout=self.cloud_timeout_seconds,
+                    timeout=timeout,
                     max_retries=0,
                 ),
                 self.cloud_model,
-                self.cloud_timeout_seconds,
+                timeout,
             )
 
         if model_type == "local":
+            timeout = Timeout(self.local_timeout_seconds)
             return (
                 OpenAI(
                     api_key=self.local_api_key,
                     base_url=self.local_base_url,
-                    timeout=self.local_timeout_seconds,
+                    timeout=timeout,
                     max_retries=0,
                 ),
                 self.local_model,
-                self.local_timeout_seconds,
+                timeout,
             )
 
         raise ValueError(f"Invalid model type: {model_type}. Must be 'cloud' or 'local'.")
@@ -370,9 +389,10 @@ class AfyaPlusTriageEngine:
         """
         Runs the triage process for a given patient message.
 
-        In "auto" mode the cloud pathway runs first; any network, HTTP, or validation
-        failure automatically re-routes the request to the local Ollama pathway. If every
-        pathway fails, a fail-safe payload escalates the message for human review.
+        In "auto" mode the cloud pathway runs first; any network, HTTP, validation, or
+        unexpected failure automatically re-routes the request to the local Ollama
+        pathway. If every pathway fails, a fail-safe payload escalates the message for
+        human review.
 
         Args:
             patient_message (str): The message from the patient describing their symptoms.
@@ -399,7 +419,7 @@ class AfyaPlusTriageEngine:
             )
 
         messages = self._build_messages(patient_message, prompt_variation)
-        total_latency_ms = 0.0
+        failed_latency_ms = 0.0
         cloud_failed = False
 
         for model_type in pathways[mode]:
@@ -413,6 +433,7 @@ class AfyaPlusTriageEngine:
                     pathway=model_type,
                     latency_ms=latency_ms,
                     used_fallback=cloud_failed,
+                    total_latency_ms=failed_latency_ms + latency_ms,
                 )
             except APITimeoutError, TimeoutException:
                 error = "request timed out"
@@ -424,9 +445,11 @@ class AfyaPlusTriageEngine:
                 error = f"invalid JSON: {e}"
             except TriageEngineError as e:
                 error = str(e)
+            except Exception as e:  # Last resort: never crash a patient request
+                error = f"unexpected {type(e).__name__}: {e}"
 
             elapsed_ms = (perf_counter() - start) * 1000
-            total_latency_ms += elapsed_ms
+            failed_latency_ms += elapsed_ms
             cloud_failed = cloud_failed or model_type == "cloud"
             print(
                 f"[{model_type}] pathway failed after {elapsed_ms:.0f} ms: {error}",
@@ -440,8 +463,9 @@ class AfyaPlusTriageEngine:
             model=None,
             pathway="fail-safe",
             used_fallback=cloud_failed,
-            latency_ms=total_latency_ms,
-            payload=dict(self.FAIL_SAFE_PAYLOAD),
+            latency_ms=failed_latency_ms,
+            total_latency_ms=failed_latency_ms,
+            payload=deepcopy(self.FAIL_SAFE_PAYLOAD),
         )
 
     def _call_model(
@@ -458,6 +482,7 @@ class AfyaPlusTriageEngine:
 
         response = client.chat.completions.create(
             response_format={"type": "json_object"},  # Native JSON mode (Phase 4)
+            max_tokens=self.MAX_OUTPUT_TOKENS,  # Bounds latency and runaway output
             messages=messages,  # type: ignore[arg-type]
             temperature=self.temperature,
             timeout=timeout,
